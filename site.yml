@@ -1,0 +1,9 @@
+---
+
+- hosts: flexvpn
+  gather_facts: false
+  connection: local
+  roles:
+    - { role: server, when: inventory_hostname in groups.hubs }
+    - { role: client, when: inventory_hostname in groups.spokes }
+

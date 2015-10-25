@@ -1,0 +1,12 @@
+[flexvpn:children]
+hubs
+spokes
+
+[hubs]
+HUB-1 ansible_ssh_host=1.1.1.1
+HUB-2 ansible_ssh_host=2.2.2.2
+
+[spokes]
+SPOKE-1 ansible_ssh_host=3.3.3.3
+SPOKE-2 ansible_ssh_host=4.4.4.4
+SPOKE-3 ansible_ssh_host=5.5.5.5
