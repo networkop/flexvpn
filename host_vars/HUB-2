@@ -1,0 +1,13 @@
+---
+domain_name: cloud.two
+
+pki_name: PKI-CLOUD-2
+
+nbma_ip: 130.0.0.2
+
+dynamic: None
+
+vpn_ip: 169.254.2.1
+
+subnet: 169.254.2.0/24
+

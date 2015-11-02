@@ -1,0 +1,15 @@
+---
+domain_name: cloud.one
+
+pki_name: PKI-CLOUD-1
+
+nbma_ip: dynamic
+
+dynamic:
+  - 120.0.0.2
+  - 121.0.0.2
+
+vpn_ip: 169.254.1.1
+
+subnet: 169.254.1.0/24
+

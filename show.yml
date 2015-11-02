@@ -1,0 +1,10 @@
+---
+
+- hosts: flexvpn 
+  gather_facts: false
+  connection: local
+  
+  tasks:
+  - name: show all variables
+    debug: var=hostvars['HUB-1']
+

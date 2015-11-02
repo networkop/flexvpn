@@ -1,134 +1,71 @@
-crypto pki trustpoint PKI-CLOUD-1
- enrollment url http://120.0.0.2:80
- serial-number
- subject-name CN=SPOKE-2.cloud.one,OU=BLUE
- vrf FVRF
- revocation-check crl
- rsakeypair CLOUD-1
- auto-enroll
+{% for hub_name in groups.hubs %}
+  {% set index = loop.index %}  
+  {% set hub = hostvars[hub_name] %}
 !
-crypto pki trustpoint PKI-CLOUD-2
- enrollment url http://130.0.0.2:80
- serial-number
- subject-name CN=SPOKE-2.cloud.two,OU=BLUE
- vrf FVRF
- revocation-check crl
- rsakeypair CLOUD-2
- auto-enroll
+crypto pki certificate map CMAP-CLOUD-{{ index }} 10
+ issuer-name co {{ hub.domain_name }}
 !
-!
-!
-crypto pki certificate map CMAP-CLOUD-1 10
- issuer-name co cloud.one
-!
-crypto pki certificate map CMAP-CLOUD-2 10
- issuer-name co cloud.two
-!
-crypto ikev2 profile IKE2-CLOUD-1
- match fvrf any
- match certificate CMAP-CLOUD-1
+crypto ikev2 profile IKE2-CLOUD-{{ index }}
+ match fvrf {{ fvrf.name }}
+ match certificate CMAP-CLOUD-{{ index }}
  identity local dn
  authentication remote rsa-sig
  authentication local rsa-sig
- pki trustpoint PKI-CLOUD-1
+ pki trustpoint {{ hub.pki_name }}
  dpd 10 2 periodic
  aaa authorization group cert list default default
- virtual-template 1
+ virtual-template {{ index }}
 !
-crypto ikev2 profile IKE2-CLOUD-2
- match fvrf any
- match certificate CMAP-CLOUD-2
- identity local dn
- authentication remote rsa-sig
- authentication local rsa-sig
- pki trustpoint PKI-CLOUD-2
- dpd 10 2 periodic
- aaa authorization group cert list default default
- virtual-template 2
+crypto ipsec profile IPSEC-CLOUD-{{ index }}
+ set ikev2-profile IKE2-CLOUD-{{ index }}
 !
-crypto ipsec profile IPSEC-CLOUD-1
- set ikev2-profile IKE2-CLOUD-1
-!
-crypto ipsec profile IPSEC-CLOUD-2
- set ikev2-profile IKE2-CLOUD-2
-!
-!
-interface Loopback0
- ip address 4.4.4.4 255.255.255.255
-!
-interface Tunnel1
+interface Tunnel{{ index }}
+{% if ivrf is defined %}
+ vrf forwarding {{ ivrf }}
+{% endif %}
  ip address negotiated
  ip nhrp network-id 1
- ip nhrp shortcut virtual-template 1
- tunnel source Ethernet0/0
- tunnel destination dynamic
- tunnel vrf FVRF
- tunnel protection ipsec profile IPSEC-CLOUD-1
+ ip nhrp shortcut virtual-template {{ index }}
+ tunnel source {{ fvrf.interface }}
+ tunnel destination {{ hub.nbma_ip }}
+ tunnel vrf {{ fvrf.name }}
+ tunnel protection ipsec profile IPSEC-CLOUD-{{ index }}
 !
-interface Tunnel2
- ip address negotiated
+interface Virtual-Template{{ index }} type tunnel
+ ip unnumbered Tunnel{{ index }}
  ip nhrp network-id 1
- ip nhrp shortcut virtual-template 2
- tunnel source Ethernet0/0
- tunnel destination 130.0.0.2
- tunnel vrf FVRF
- tunnel protection ipsec profile IPSEC-CLOUD-2
-!
-interface Virtual-Template1 type tunnel
- ip unnumbered Tunnel1
- ip nhrp network-id 1
- ip nhrp shortcut virtual-template 1
+ ip nhrp shortcut virtual-template {{ index }}
  ip nhrp redirect
- tunnel vrf FVRF
- tunnel protection ipsec profile IPSEC-CLOUD-1
+ tunnel vrf {{ fvrf.name }}
+ tunnel protection ipsec profile IPSEC-CLOUD-{{ index }}
 !
-interface Virtual-Template2 type tunnel
- ip unnumbered Tunnel2
- ip nhrp network-id 1
- ip nhrp shortcut virtual-template 2
- ip nhrp redirect
- tunnel vrf FVRF
- tunnel protection ipsec profile IPSEC-CLOUD-2
-!
-router bgp 1
- bgp log-neighbor-changes
- network 4.4.4.4 mask 255.255.255.255
- neighbor 169.254.1.1 remote-as 1
- neighbor 169.254.1.1 update-source Tunnel1
- neighbor 169.254.1.1 fall-over route-map RM-BGP-FALLOVER
- neighbor 169.254.2.2 remote-as 1
- neighbor 169.254.2.2 update-source Tunnel2
- neighbor 169.254.2.2 fall-over route-map RM-BGP-FALLOVER
-!
-
-p prefix-list PL-ALL-LOOPBACKS seq 5 permit 0.0.0.0/0 ge 32
-ip sla auto discovery
-ip sla 1
- icmp-echo 120.0.0.2 source-interface Ethernet0/0
- vrf FVRF
- frequency 5
-ip sla schedule 1 life forever start-time now
-ip sla 2
- icmp-echo 121.0.0.2 source-interface Ethernet0/0
- vrf FVRF
- frequency 5
-ip sla schedule 2 life forever start-time now
+ip prefix-list PL-ALL-LOOPBACKS seq 5 permit 0.0.0.0/0 ge 32
 !
 route-map RM-BGP-FALLOVER permit 10
  match ip address prefix-list PL-ALL-LOOPBACKS
 !
-track 1 ip sla 1
- delay down 5
+router bgp {{ bgp_asn }}
+ bgp log-neighbor-changes
+ neighbor {{ hub.vpn_ip }} remote-as {{ bgp_asn }}
+ neighbor {{ hub.vpn_ip }} update-source Tunnel{{ index }}
+ neighbor {{ hub.vpn_ip }} fall-over route-map RM-BGP-FALLOVER
+  
+{%- if hub.nbma_ip == 'dynamic' %}
+  {% for dest_ip in hub.dynamic %}
+ip sla {{ loop.index }} 
+ icmp-echo {{ dest_ip }} source-interface {{ fvrf.interface }}
+ vrf {{ fvrf.name }}
+ frequency 5
+ip sla schedule {{ loop.index }} life forever start-time now
 !
-track 2 ip sla 2
- delay down 5
+track {{ loop.index }} ip sla {{ loop.index }}
 !
-!
-crypto ikev2 client flexvpn CLIENT-HUB-1
-  peer 1 120.0.0.2 track 1
-  peer 2 121.0.0.2 track 2
+crypto ikev2 client flexvpn FLEXVPN-{{ hub_name }}
+  peer {{ loop.index }} {{ dest_ip }} track {{ loop.index }}
+  {% endfor %}
+crypto ikev2 client flexvpn FLEXVPN-{{ hub_name }}
   peer reactivate
-  client connect Tunnel1
+  client connect Tunnel{{ index }}
+{% endif %}
+{% endfor %}
 !
-
-!!

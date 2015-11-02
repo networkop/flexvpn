@@ -1,0 +1,6 @@
+---
+bgp_asn: 1
+
+fvrf: 
+  name: FVRF
+  interface: Ethernet0/0
