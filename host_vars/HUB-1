@@ -1,4 +1,6 @@
 ---
+primary: true
+
 domain_name: cloud.one
 
 pki_name: PKI-CLOUD-1

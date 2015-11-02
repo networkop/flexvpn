@@ -1,0 +1,17 @@
+{% for dest_ip in hub.dynamic %}
+ip sla {{ loop.index }}
+ icmp-echo {{ dest_ip }} source-interface {{ fvrf.interface }}
+ vrf {{ fvrf.name }}
+ frequency 5
+ip sla schedule {{ loop.index }} life forever start-time now
+!
+track {{ loop.index }} ip sla {{ loop.index }}
+!
+crypto ikev2 client flexvpn FLEXVPN-{{ hub.inventory_hostname }}
+  peer {{ loop.index }} {{ dest_ip }} track {{ loop.index }}
+!
+{% endfor %}
+crypto ikev2 client flexvpn FLEXVPN-{{ hub.inventory_hostname }}
+  peer reactivate
+  client connect Tunnel{{ index }}
+!

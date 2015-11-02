@@ -6,5 +6,5 @@
   
   tasks:
   - name: show all variables
-    debug: var=hostvars['HUB-1']
+    debug: var=hostvars | reject(inventory_hostname == 'HUB-2')
 

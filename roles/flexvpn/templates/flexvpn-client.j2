@@ -1,7 +1,12 @@
-{% for hub_name in groups.hubs %}
-  {% set index = loop.index %}  
-  {% set hub = hostvars[hub_name] %}
 !
+ip prefix-list PL-ALL-LOOPBACKS seq 5 permit 0.0.0.0/0 ge 32
+!
+route-map RM-BGP-FALLOVER permit 10
+ match ip address prefix-list PL-ALL-LOOPBACKS
+!  
+{%- for hub_name in groups.hubs %}
+{% set index = loop.index %}  
+{% set hub = hostvars[hub_name] %}
 crypto pki certificate map CMAP-CLOUD-{{ index }} 10
  issuer-name co {{ hub.domain_name }}
 !
@@ -32,6 +37,9 @@ interface Tunnel{{ index }}
  tunnel protection ipsec profile IPSEC-CLOUD-{{ index }}
 !
 interface Virtual-Template{{ index }} type tunnel
+{% if ivrf is defined %}
+ vrf forwarding {{ ivrf }}
+{% endif %}
  ip unnumbered Tunnel{{ index }}
  ip nhrp network-id 1
  ip nhrp shortcut virtual-template {{ index }}
@@ -39,33 +47,13 @@ interface Virtual-Template{{ index }} type tunnel
  tunnel vrf {{ fvrf.name }}
  tunnel protection ipsec profile IPSEC-CLOUD-{{ index }}
 !
-ip prefix-list PL-ALL-LOOPBACKS seq 5 permit 0.0.0.0/0 ge 32
-!
-route-map RM-BGP-FALLOVER permit 10
- match ip address prefix-list PL-ALL-LOOPBACKS
-!
 router bgp {{ bgp_asn }}
- bgp log-neighbor-changes
  neighbor {{ hub.vpn_ip }} remote-as {{ bgp_asn }}
  neighbor {{ hub.vpn_ip }} update-source Tunnel{{ index }}
  neighbor {{ hub.vpn_ip }} fall-over route-map RM-BGP-FALLOVER
-  
-{%- if hub.nbma_ip == 'dynamic' %}
-  {% for dest_ip in hub.dynamic %}
-ip sla {{ loop.index }} 
- icmp-echo {{ dest_ip }} source-interface {{ fvrf.interface }}
- vrf {{ fvrf.name }}
- frequency 5
-ip sla schedule {{ loop.index }} life forever start-time now
-!
-track {{ loop.index }} ip sla {{ loop.index }}
-!
-crypto ikev2 client flexvpn FLEXVPN-{{ hub_name }}
-  peer {{ loop.index }} {{ dest_ip }} track {{ loop.index }}
-  {% endfor %}
-crypto ikev2 client flexvpn FLEXVPN-{{ hub_name }}
-  peer reactivate
-  client connect Tunnel{{ index }}
+!  
+{% if hub.nbma_ip == 'dynamic' %}
+{% include 'dynamic.j2' %}
 {% endif %}
 {% endfor %}
 !

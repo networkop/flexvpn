@@ -1,8 +1,0 @@
-{% for hub_name in groups.hubs %}
-  {% set index = loop.index %}  
-  {% set hub = hostvars[hub_name] %}
-{{ index }}
-{{ hub }}
-{{ 'pki_name' in hub }}
-{{ hub.bgp_asn }}
-{% endfor %}

@@ -1,4 +1,6 @@
 ---
+primary: False
+
 domain_name: cloud.two
 
 pki_name: PKI-CLOUD-2

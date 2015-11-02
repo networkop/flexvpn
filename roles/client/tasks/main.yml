@@ -1,4 +1,0 @@
----
-- name: Generate initial configuration
-  template: src=flexvpn-client.j2 dest=./files/{{inventory_hostname}}.conf
-
