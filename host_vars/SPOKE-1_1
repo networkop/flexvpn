@@ -1,0 +1,5 @@
+fvrf: 
+  name: FVRF-1
+  interface: Ethernet0/0
+ivrf: IVRF-1 
+bw: 50000

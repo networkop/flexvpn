@@ -1,10 +1,10 @@
 ---
 - name: Generate FlexVPN Hub configuration
-  template: src=flexvpn-server.j2 dest=./files/{{inventory_hostname}}.conf
+  template: src=server.j2 dest=./files/{{inventory_hostname}}.conf
   when: inventory_hostname in groups['hubs']
 
 - name: Generate FlexVPN Spoke configuration
-  template: src=flexvpn-client.j2 dest=./files/{{inventory_hostname}}.conf
+  template: src=client.j2 dest=./files/{{inventory_hostname}}.conf
   when: inventory_hostname in groups['spokes']
 
 

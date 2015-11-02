@@ -1,10 +1,18 @@
 {% if primary %}
 {% set index = 1 %}
+{% set peer_index = 2 %}
 {% else %}
 {% set index = 2 %}
+{% set peer_index = 1 %}
 {% endif %}
 {% set peer_hub_name = groups['hubs'] | difference([inventory_hostname]) | first %}
 {% set hub = hostvars[peer_hub_name] %}
+{% set tunnel_ip = tunnel.subnet | ipaddr(index) | ipaddr('address') %}  
+{% set tunnel_peer_ip =  tunnel.subnet | ipaddr(peer_index) | ipaddr('address') %}
+!
+policy-map PMAP-SPOKE-SHAPER-PARENT
+!
+ip local pool CLOUD-{{ index }}-POOL {{ subnet | ipaddr(2) | ipaddr('address') }} {{ subnet | ipaddr(-2) | ipaddr('address') }}
 !
 crypto pki certificate map CERT-MAP-CLOUD-{{ index }} 10
  subject-name co {{ domain_name }}
@@ -16,21 +24,21 @@ crypto ikev2 name-mangler IKE-MANGLER-OU
 {% set group = bw_type|upper %}
 !
 aaa attribute list AAA-{{ group }}
- attribute type interface-config "bandwidth reference-qos {{ bandwidth[bw_type] }}"
+ attribute type interface-config "bandwidth qos-reference  {{ bandwidth[bw_type] }}"
 !
 crypto ikev2 authorization policy {{ group }}
  pool CLOUD-{{ index }}-POOL
  route set interface
  route accept any tag 20
  aaa attribute list AAA-{{ group }}
+ exit
 !
 {% endfor %}
 !
 crypto ikev2 keyring KEY-INTERHUB
  peer HUB
   address 0.0.0.0 0.0.0.0
-  pre-shared-key local {{ tunnel.pre_shared_key }}
-  pre-shared-key remote {{ tunnel.pre_shared_key }}
+  pre-shared-key {{ tunnel.pre_shared_key }}
 !
 !
 crypto ikev2 profile IKE2-CLOUD-{{ index }}
@@ -56,7 +64,7 @@ crypto ikev2 profile IKE2-INTERHUB
  virtual-template 101
 !
 crypto ipsec profile IPSEC-CLOUD-{{ index }}
- set ikev2-profile CLOUD-{{ index }}
+ set ikev2-profile IKE2-CLOUD-{{ index }}
 !
 crypto ipsec profile IPSEC-INTERHUB
  set ikev2-profile IKE2-INTERHUB
@@ -65,7 +73,7 @@ interface Loopback1
  ip address {{ vpn_ip }} 255.255.255.255
 !
 interface Loopback101
- ip address {{ tunnel.subnet | ipaddr(index) | ipaddr('address') }} 255.255.255.255
+ ip address {{ tunnel_ip }} 255.255.255.255
 !
 interface Virtual-Template1 type tunnel
  ip unnumbered Loopback1
@@ -73,12 +81,14 @@ interface Virtual-Template1 type tunnel
  ip nhrp redirect
  tunnel vrf {{ fvrf.name }}
  tunnel protection ipsec profile IPSEC-CLOUD-{{ index }}
+ service-policy output PMAP-SPOKE-SHAPER-PARENT
 !
 {% if primary %}
 interface Virtual-Template101 type tunnel
  ip unnumbered Loopback101
  ip nhrp network-id 1
  tunnel vrf {{ fvrf.name }}
+ service-policy output PMAP-SPOKE-SHAPER-PARENT
  tunnel protection ipsec profile IPSEC-INTERHUB
 {% else %}
 interface Tunnel101
@@ -87,15 +97,14 @@ interface Tunnel101
  tunnel source {{ fvrf.interface }}
  tunnel destination {{ hub.nbma_ip }}
  tunnel vrf {{ fvrf.name }}
+ service-policy output PMAP-SPOKE-SHAPER-PARENT
  tunnel protection ipsec profile IPSEC-INTERHUB
 !
 {% endif %}
 !
-{%- if hub.nbma_ip == 'dynamic' %}
+{% if hub.nbma_ip == 'dynamic' %}
 {% set index = 101 %}
 {% include 'dynamic.j2' %}
-{% else %}
-!
 {% endif %}
 !
 !
@@ -109,13 +118,11 @@ router bgp 1
  neighbor SPOKES fall-over route-map RM-BGP-FALLOVER
  neighbor SPOKES route-reflector-client
  neighbor SPOKES next-hop-self all
- neighbor 169.254.101.2 update-source Loopback101
- neighbor 169.254.101.2 remote-as 1
- neighbor 169.254.101.2 fall-over route-map RM-BGP-FALLOVER
- neighbor 169.254.101.2 route-reflector-client
- neighbor 169.254.101.2 next-hop-self all
-!
-ip local pool CLOUD-{{ index }}-POOL {{ subnet | ipaddr(2) | ipaddr('address') }} {{ subnet | ipaddr(-2) | ipaddr('address') }}
+ neighbor {{ tunnel_peer_ip }} remote-as 1
+ neighbor {{ tunnel_peer_ip }} update-source Loopback101
+ neighbor {{ tunnel_peer_ip }} fall-over route-map RM-BGP-FALLOVER
+ neighbor {{ tunnel_peer_ip }} route-reflector-client
+ neighbor {{ tunnel_peer_ip }} next-hop-self all
 !
 !
 ip prefix-list PL-ALL-LOOPBACKS seq 5 permit 0.0.0.0/0 ge 32

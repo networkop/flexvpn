@@ -7,11 +7,11 @@ ip sla schedule {{ loop.index }} life forever start-time now
 !
 track {{ loop.index }} ip sla {{ loop.index }}
 !
-crypto ikev2 client flexvpn FLEXVPN-{{ hub.inventory_hostname }}
+crypto ikev2 client flexvpn FLEXVPN-{{ hub.inventory_hostname }}-{{ index }}
   peer {{ loop.index }} {{ dest_ip }} track {{ loop.index }}
 !
 {% endfor %}
-crypto ikev2 client flexvpn FLEXVPN-{{ hub.inventory_hostname }}
+crypto ikev2 client flexvpn FLEXVPN-{{ hub.inventory_hostname }}-{{ index }}
   peer reactivate
   client connect Tunnel{{ index }}
 !
