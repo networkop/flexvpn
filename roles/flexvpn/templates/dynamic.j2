@@ -1,14 +1,19 @@
 {% for dest_ip in hub.dynamic %}
-ip sla {{ loop.index }}
+{% if index < 99 %}
+{% set inner_index = index * 10  + loop.index %}
+{% else %}
+{% set inner_index = index + loop.index %}
+{% endif %}
+ip sla {{ inner_index }}
  icmp-echo {{ dest_ip }} source-interface {{ fvrf.interface }}
  vrf {{ fvrf.name }}
  frequency 5
-ip sla schedule {{ loop.index }} life forever start-time now
+ip sla schedule {{ inner_index }} life forever start-time now
 !
-track {{ loop.index }} ip sla {{ loop.index }}
+track {{ inner_index }} ip sla {{ inner_index }}
 !
 crypto ikev2 client flexvpn FLEXVPN-{{ hub.inventory_hostname }}-{{ index }}
-  peer {{ loop.index }} {{ dest_ip }} track {{ loop.index }}
+  peer {{ inner_index }} {{ dest_ip }} track {{ inner_index }}
 !
 {% endfor %}
 crypto ikev2 client flexvpn FLEXVPN-{{ hub.inventory_hostname }}-{{ index }}

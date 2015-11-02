@@ -24,7 +24,7 @@ crypto ikev2 name-mangler IKE-MANGLER-OU
 {% set group = bw_type|upper %}
 !
 aaa attribute list AAA-{{ group }}
- attribute type interface-config "bandwidth qos-reference  {{ bandwidth[bw_type] }}"
+ attribute type interface-config "bandwidth qos-reference {{ bandwidth[bw_type] }}"
 !
 crypto ikev2 authorization policy {{ group }}
  pool CLOUD-{{ index }}-POOL
@@ -47,7 +47,7 @@ crypto ikev2 profile IKE2-CLOUD-{{ index }}
  identity local dn
  authentication remote rsa-sig
  authentication local rsa-sig
- pki trustpoint {{ pki_name }}
+ pki trustpoint PKI-CLOUD-{{ index }}
  dpd 10 2 periodic
  aaa authorization group cert list default name-mangler IKE-MANGLER-OU
  virtual-template 1 
