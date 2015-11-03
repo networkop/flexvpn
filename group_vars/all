@@ -4,3 +4,9 @@ bgp_asn: 1
 fvrf: 
   name: FVRF
   interface: Ethernet0/0
+
+bandwidth:
+  RED:   50000
+  GREEN: 20000
+  BLUE:  10000
+

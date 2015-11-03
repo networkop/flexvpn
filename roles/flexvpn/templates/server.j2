@@ -5,7 +5,7 @@
 {% set index = 2 %}
 {% set peer_index = 1 %}
 {% endif %}
-{% set peer_hub_name = groups['hubs'] | difference([inventory_hostname]) | first %}
+{% set peer_hub_name = groups['HUBS'] | difference([inventory_hostname]) | first %}
 {% set hub = hostvars[peer_hub_name] %}
 {% set tunnel_ip = tunnel.subnet | ipaddr(index) | ipaddr('address') %}  
 {% set tunnel_peer_ip =  tunnel.subnet | ipaddr(peer_index) | ipaddr('address') %}

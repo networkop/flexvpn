@@ -1,13 +1,22 @@
-[flexvpn:children]
-hubs
-spokes
+[FLEXVPN:children]
+HUBS
+SPOKES
 
-[hubs]
+[HUBS]
 HUB-1
 HUB-2
 
-[spokes]
+[SPOKES:children]
+GREEN
+BLUE
+RED
+
+[RED]
 SPOKE-1_1
 SPOKE-1_2
+
+[BLUE]
 SPOKE-2
+
+[GREEN]
 SPOKE-3

@@ -2,9 +2,13 @@
 policy-map PMAP-PHYSICAL-SHAPER
 !
 interface {{ fvrf.interface }}
- bandwidth qos-reference {{ bw }}
+{% for group in bandwidth %}
+{% if inventory_hostname in groups[group] %}
+ bandwidth qos-reference {{ bandwidth[group] }}
+{% endif %}
+{% endfor %}
  service-policy output PMAP-PHYSICAL-SHAPER
-!
+! 
 ip prefix-list PL-ALL-LOOPBACKS seq 5 permit 0.0.0.0/0 ge 32
 !
 route-map RM-BGP-FALLOVER permit 10
@@ -16,7 +20,7 @@ route-map RM-BGP-FALLOVER permit 10
 {% else %}
 {% set base = 0 %}
 {% endif %}
-{% for hub_name in groups.hubs %}
+{% for hub_name in groups.HUBS %}
 {% set index = base + loop.index %}  
 {% set hub = hostvars[hub_name] %}
 crypto pki certificate map CMAP-CLOUD-{{ index }} 10

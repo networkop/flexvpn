@@ -1,6 +1,6 @@
 ---
 
-- hosts: flexvpn
+- hosts: FLEXVPN
   gather_facts: false
   connection: local
   roles: 
